@@ -11,6 +11,8 @@ export default {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        greenish: '#89b062',
+        lightcream: '#EEEED2'
       },
     },
   },

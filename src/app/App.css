@@ -1,0 +1,97 @@
+.chessBoard {
+	display: grid;
+	width: 100%;
+	max-width: 600px;
+	height: auto;
+	aspect-ratio: 1;
+	grid-template-columns: repeat(8, 1fr);
+	grid-template-rows: repeat(8, 1fr);
+	border: 2px solid #333;
+	flex: 3;
+}
+
+.chessBoard-container {
+  user-select: none;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	user-select: none;
+}
+
+.black,.white {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.black > div, .white > div {
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.black {
+	background: #89b062;
+}
+
+.white {
+	background: #EEEED2;
+}
+
+/* for all classes background image */
+.r{
+  background-image: url('../assets/rook-b.svg');
+}
+.R{
+  background-image: url('../assets/rook-w.svg');
+}
+.n{
+  background-image: url('../assets/knight-b.svg');
+}
+.N{
+  background-image: url('../assets/knight-w.svg');
+}
+.b{
+  background-image: url('../assets/bishop-b.svg');
+}
+.B{
+  background-image: url('../assets/bishop-w.svg');
+}
+.q{
+  background-image: url('../assets/queen-b.svg');
+}
+.Q{
+  background-image: url('../assets/queen-w.svg');
+}
+.k{
+  background-image: url('../assets/king-b.svg');
+}
+.K{
+  background-image: url('../assets/king-w.svg');
+}
+.p{
+  background-image: url('../assets/pawn-b.svg');
+}
+.P{
+  background-image: url('../assets/pawn-w.svg');
+}
+[data-active="true"] {
+  position: relative; /* Ensure the parent can position the pseudo-element */
+}
+
+[data-active="true"]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* Center the dot */
+  width: 10px; /* Adjust size as needed */
+  height: 10px; /* Adjust size as needed */
+  background-color: red;
+  border-radius: 50%; /* Makes it a circle */
+  box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); /* Optional: adds a glowing effect */
+  pointer-events: none; /* Ensures it doesn't block interactions with the parent */
+}
+
