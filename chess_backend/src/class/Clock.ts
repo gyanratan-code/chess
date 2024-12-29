@@ -6,14 +6,13 @@ export default class Clock {
 
     constructor(initialTime: number) {
         this.remainingTime = initialTime;
-        this.startCountdown();
-    }
-
-    private startCountdown() {
+        // this.startCountdown();
         this.endedPromise = new Promise<void>((resolve) => {
             this.endedResolve = resolve;
         });
+    }
 
+    startCountdown() {
         this.intervalId = setInterval(() => {
             if (this.remainingTime > 0) {
                 this.remainingTime-= 0.01;

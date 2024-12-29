@@ -1,9 +1,10 @@
 import { Chess } from 'chess.js';
 class Board {
-    private chess: Chess;
+    chess: Chess;
 
     constructor() {
         this.chess = new Chess();
+        
     }
 
     getBoard() {
