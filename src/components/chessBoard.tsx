@@ -1,5 +1,5 @@
 "use client";
-import { Chess } from '@/lib/chess/chess';
+import { Chess } from 'chess.js';
 import Square from '@/components/square.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -9,6 +9,7 @@ export default function ChessBoard() {
 	// @ts-ignore
 	const [chessBoard, setChessBoard] = useState<JSX.Element[]>([]);
 	let highlighted = useRef<string>('##');
+	let kingCheckedPos= useRef("##");
 
 	const get_piece_position = ( piece: { type: string, color: string} ) => {
     let squares: string[] = [];
@@ -63,7 +64,6 @@ export default function ChessBoard() {
 		});
 	};
 
-
 	function handleSquareClick(e: React.MouseEvent<HTMLDivElement>) {
 		const square = e.target as HTMLDivElement;
 		// @ts-ignore
@@ -80,15 +80,16 @@ export default function ChessBoard() {
 				if(movePlayed.san.at(-1)==='+'){
 					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
 					refs.current[squareKing[0]][parseInt(squareKing[1])-1].current.dataset.check="true"; //set data-active to true
+					kingCheckedPos.current=squareKing;
 				}else if(movePlayed.san.at(-1)==='#'){
 					;
 					//to do
 				}else{
-					const colors= ['b','w'];
-					colors.forEach(color => {
-						const squareKing= get_piece_position({type:'k','color':color})[0];
+					if(kingCheckedPos.current!="##"){
+						const squareKing= kingCheckedPos.current;
 						refs.current[squareKing[0]][parseInt(squareKing[1])-1].current.dataset.check="false";
-					});
+					}
+					kingCheckedPos.current=="##";
 				}
 				// Handle castling
 				if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
