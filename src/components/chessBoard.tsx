@@ -24,20 +24,18 @@ export default function ChessBoard() {
     return squares;
   }
 	const columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-	const refs = useRef(
-		Object.fromEntries(
-			columns.map((col) => [
-				col,
-				Array.from({ length: 8 }, () => React.createRef<HTMLDivElement>()),
-			])
-		)
-	);
+	const refs = useRef<Record<string, React.RefObject<HTMLDivElement | null>[]>>(
+		columns.reduce<Record<string, React.RefObject<HTMLDivElement | null>[]>>((acc, col) => {
+			acc[col] = Array.from({ length: 8 }, () => React.createRef<HTMLDivElement>());
+			return acc;
+		}, {})
+	);	
 
 	const toggleDataActive = (key: string, value: string) => {
 		// Get possible moves for the selected square
 		// @ts-ignore
 		const moves = chess.moves({ square: key, verbose: true });
-		moves.forEach((move) => {
+		moves.forEach((move:{ flags: string; to: string }) => {
 			// Handle castling
 			if (move.flags.includes("k") || move.flags.includes("q")) {
 				// King-side castling (O-O)
@@ -58,7 +56,7 @@ export default function ChessBoard() {
 			}
 			// Handle normal moves
 			const targetSquare = refs.current[move.to[0]][parseInt(move.to[1]) - 1];
-			if (targetSquare.current) {
+			if (targetSquare?.current) {
 				targetSquare.current.dataset.active = value;
 			}
 		});
@@ -79,12 +77,18 @@ export default function ChessBoard() {
 				// check if opponent is check or mate
 				if(kingCheckedPos.current!="##"){
 					const squareKing= kingCheckedPos.current;
-					refs.current[squareKing[0]][parseInt(squareKing[1])-1].current.dataset.check="false";
+					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+					if (squareRef?.current) {
+						squareRef.current.dataset.check = "false";
+					}
 				}
 				kingCheckedPos.current=="##";
 				if(movePlayed.san.at(-1)==='+'){
 					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
-					refs.current[squareKing[0]][parseInt(squareKing[1])-1].current.dataset.check="true"; //set data-active to true
+					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+					if (squareRef?.current) {
+						squareRef.current.dataset.check = "true";
+					}
 					kingCheckedPos.current=squareKing;
 				}else if(movePlayed.san.at(-1)==='#'){
 					;
@@ -123,8 +127,10 @@ export default function ChessBoard() {
 
 				// Update the square for the moved piece
 				const prevSquare = refs.current[move[0]][parseInt(move[1]) - 1];
-				square.className = prevSquare.current?.className;
-				prevSquare.current.className = "";
+				square.className = prevSquare.current?.className || "";
+				if (prevSquare.current) {
+					prevSquare.current.className = ""; // Clear previous class
+				}				
 				// Reset highlighted
 				highlighted.current = "##";
 			}
