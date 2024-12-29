@@ -77,6 +77,11 @@ export default function ChessBoard() {
 			if (movePlayed) {
 				// console.log(movePlayed);
 				// check if opponent is check or mate
+				if(kingCheckedPos.current!="##"){
+					const squareKing= kingCheckedPos.current;
+					refs.current[squareKing[0]][parseInt(squareKing[1])-1].current.dataset.check="false";
+				}
+				kingCheckedPos.current=="##";
 				if(movePlayed.san.at(-1)==='+'){
 					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
 					refs.current[squareKing[0]][parseInt(squareKing[1])-1].current.dataset.check="true"; //set data-active to true
@@ -84,12 +89,6 @@ export default function ChessBoard() {
 				}else if(movePlayed.san.at(-1)==='#'){
 					;
 					//to do
-				}else{
-					if(kingCheckedPos.current!="##"){
-						const squareKing= kingCheckedPos.current;
-						refs.current[squareKing[0]][parseInt(squareKing[1])-1].current.dataset.check="false";
-					}
-					kingCheckedPos.current=="##";
 				}
 				// Handle castling
 				if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
