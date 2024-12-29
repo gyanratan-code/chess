@@ -3,6 +3,7 @@ body{
 }
 
 .chessBoard {
+  position: relative;
 	display: grid;
 	width: 100%;
 	max-width: 600px;
@@ -143,3 +144,28 @@ body{
   pointer-events: none; /* Ensure the overlay doesn't block interactions */
 }
 
+/* announcement functionality */
+.announcement {
+  position: absolute; /* Ensures it doesn't disrupt layout */
+  bottom: 10px; /* Adjust position as needed */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+  pointer-events: none; /* Prevents interference */
+  opacity: 0; /* Hidden by default */
+  transition: opacity 0.3s ease-in-out; /* Smooth visibility transition */
+}
+
+.announcement.visible {
+  opacity: 1; /* Fully visible when a message is set */
+  pointer-events: auto; /* Enables interaction if needed */
+}
+
+.announcement.hidden {
+  opacity: 0; /* Fully hidden */
+  pointer-events: none; /* Ensures it doesn't interfere with user events */
+}

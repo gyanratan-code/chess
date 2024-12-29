@@ -75,73 +75,80 @@ export default function ChessBoard() {
 		if (square.dataset.active == 'true') {
 			toggleDataActive(highlighted.current, "false");
 			const move = highlighted.current;
+			let movePlayed: ReturnType<typeof chess.move> | null = null;
 			try{
-				const movePlayed = chess.move({ from: move, to: squareKey });
-			// console.log(movePlayed);
-				if (movePlayed) {
-					// console.log(movePlayed);
-					// check if opponent is check or mate
-					if(kingCheckedPos.current!="##"){
-						const squareKing= kingCheckedPos.current;
-						const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-						if (squareRef?.current) {
-							squareRef.current.dataset.check = "false";
-						}
-					}
-					kingCheckedPos.current=="##";
-					if(movePlayed.san.at(-1)==='+'){
-						const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
-						const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-						if (squareRef?.current) {
-							squareRef.current.dataset.check = "true";
-						}
-						kingCheckedPos.current=squareKing;
-					}else if(movePlayed.san.at(-1)==='#'){
-						;
-						//to do
-					}
-					// Handle castling
-					if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
-						const isKingSide = movePlayed.flags.includes("k");
-						const rookFromKey = movePlayed.color === "w"
-							? (isKingSide ? "h1" : "a1") // White's king-side or queen-side rook
-							: (isKingSide ? "h8" : "a8"); // Black's king-side or queen-side rook
-
-						const rookToKey = movePlayed.color === "w"
-							? (isKingSide ? "f1" : "d1") // White's king-side or queen-side rook destination
-							: (isKingSide ? "f8" : "d8"); // Black's king-side or queen-side rook destination
-
-						const rookFrom = refs.current[rookFromKey[0]][parseInt(rookFromKey[1])-1];
-						const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1])-1];
-						console.log(rookFrom.current,rookTo.current);
-						if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
-							rookTo.current.className = rookFrom.current.className; // Move rook class
-							rookFrom.current.className = ""; // Clear previous rook square
-						}
-					}
-					// Handle en passant
-					if (movePlayed.flags.includes("e")) {
-						const captureSquare = refs.current[movePlayed.to[0]][
-							parseInt(movePlayed.to[1]) - 1 - (movePlayed.color === 'w' ? 1 : -1)
-						];
-						if (captureSquare.current) {
-							captureSquare.current.className = ""; // Remove the captured pawn
-						}
-					}
-					// Handle the promotion
-					// create a prompt and then place it \to:do
-
-					// Update the square for the moved piece
-					const prevSquare = refs.current[move[0]][parseInt(move[1]) - 1];
-					square.className = prevSquare.current?.className || "";
-					if (prevSquare.current) {
-						prevSquare.current.className = ""; // Clear previous class
-					}				
-					// Reset highlighted
-					highlighted.current = "##";
-				}
+				// try running to intial square to target square
+				movePlayed = chess.move({ from: move, to: squareKey });
 			}catch (error) {
-				return;
+				// It must be a promotion move since using only those square where move is possible
+				const userPrefer:string|null= prompt("Please type only one: q/r/n/b");
+				movePlayed= chess.move({ from: move, to: squareKey,promotion:`${userPrefer?userPrefer:'q'}` });
+				console.log(movePlayed);
+			}
+			if (movePlayed) {
+				// console.log(movePlayed);
+				// check if opponent is check or mate
+				if(kingCheckedPos.current!="##"){
+					const squareKing= kingCheckedPos.current;
+					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+					if (squareRef?.current) {
+						squareRef.current.dataset.check = "false";
+					}
+				}
+				kingCheckedPos.current=="##";
+				if(movePlayed.san.at(-1)==='+'){
+					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
+					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+					if (squareRef?.current) {
+						squareRef.current.dataset.check = "true";
+					}
+					kingCheckedPos.current=squareKing;
+				}else if(movePlayed.san.at(-1)==='#'){
+					;
+					//to do
+				}
+				// Handle castling
+				if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
+					const isKingSide = movePlayed.flags.includes("k");
+					const rookFromKey = movePlayed.color === "w"
+						? (isKingSide ? "h1" : "a1") // White's king-side or queen-side rook
+						: (isKingSide ? "h8" : "a8"); // Black's king-side or queen-side rook
+
+					const rookToKey = movePlayed.color === "w"
+						? (isKingSide ? "f1" : "d1") // White's king-side or queen-side rook destination
+						: (isKingSide ? "f8" : "d8"); // Black's king-side or queen-side rook destination
+
+					const rookFrom = refs.current[rookFromKey[0]][parseInt(rookFromKey[1])-1];
+					const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1])-1];
+					// console.log(rookFrom.current,rookTo.current);
+					if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
+						rookTo.current.className = rookFrom.current.className; // Move rook class
+						rookFrom.current.className = ""; // Clear previous rook square
+					}
+				}
+				// Handle en passant
+				if (movePlayed.flags.includes("e")) {
+					const captureSquare = refs.current[movePlayed.to[0]][
+						parseInt(movePlayed.to[1]) - 1 - (movePlayed.color === 'w' ? 1 : -1)
+					];
+					if (captureSquare.current) {
+						captureSquare.current.className = ""; // Remove the captured pawn
+					}
+				}
+				
+				// Update the square for the moved piece
+				const prevSquare = refs.current[move[0]][parseInt(move[1]) - 1];
+				square.className = prevSquare.current?.className || "";
+				if (prevSquare.current) {
+					prevSquare.current.className = ""; // Clear previous class
+				}				
+				// Reset highlighted
+				highlighted.current = "##";
+				// Handle the promotion
+				if(movePlayed.flags.includes("p")){
+					const promotedClass:string= (movePlayed.color=='b' ? movePlayed.promotion : movePlayed.promotion?.toLocaleUpperCase());
+					square.className=promotedClass;
+				}
 			}
 			return;
 		}
@@ -177,9 +184,19 @@ export default function ChessBoard() {
 		}
 		setChessBoard(board);
 	}, []);
+	setTimeout(()=>{
+		setMessage(null);
+	},3000);
+	const [message,setMessage]= useState<string|null>("Let's Begin match");
 	return (
 		<div className="chessBoard">
 			{chessBoard}
+			<div
+				className={`announcement ${message ? "visible" : "hidden"}`}
+				aria-hidden={!message} // Accessibility: indicates when the element is inactive
+			>
+				{message}
+			</div>
 		</div>
 	);
 }
