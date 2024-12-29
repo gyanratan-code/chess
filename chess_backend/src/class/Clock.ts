@@ -16,16 +16,16 @@ export default class Clock {
 
         this.intervalId = setInterval(() => {
             if (this.remainingTime > 0) {
-                this.remainingTime--;
-                console.log(`Time left: ${this.remainingTime} seconds`);
+                this.remainingTime-= 0.01;
+                // console.log(`Time left: ${this.remainingTime} seconds`);
             } else {
                 this.stopCountdown();
-                console.log("Timer ended.");
+                // console.log("Timer ended.");
                 if (this.endedResolve) {
                     this.endedResolve();
                 }
             }
-        }, 1000);
+        }, 10);
     }
 
     stopCountdown() {

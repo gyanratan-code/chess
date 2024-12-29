@@ -23,6 +23,7 @@ export default class GameRoom{
             this.player1.send(JSON.stringify({"Message":`${this.Id} Room, and Player1's Clock Ended.`}));
             this.player2.send(JSON.stringify({"Message":`${this.Id} Room, and Player1's Clock Ended.`}));
             this.p2Clock.stopCountdown();
+            console.log("")
         });
         const p2Ended:Promise<void> = this.p2Clock.hasEnded().then((e)=>{
             this.player1.send(JSON.stringify({"Message":`${this.Id} Room, and Player2's Clock Ended.`}));

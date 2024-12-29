@@ -7,6 +7,7 @@ console.log("Websocket Server on port ws://localhost:4040");
 wss.on("connection", (ws:WebSocket)=>{
     if(waiter){
         GM.AddRoom(waiter, ws);
+        waiter = null;
     }
     else{
         waiter = ws
