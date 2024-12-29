@@ -1,18 +1,18 @@
 "use client";
-import { Chess } from 'chess.js';
-import Square from '@/components/square.tsx';
+import { Chess, Square } from 'chess.js';
+import Piece from '@/components/square.tsx';
 import React, { useEffect, useRef, useState } from 'react';
 
 export default function ChessBoard() {
-	let chess = new Chess();
-	const [position, setPosition] = useState(chess.board());
-	// @ts-ignore
-	const [chessBoard, setChessBoard] = useState<JSX.Element[]>([]);
-	let highlighted = useRef<string>('##');
-	let kingCheckedPos= useRef("##");
+	const chess = new Chess();
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const [position, setPosition] = useState(chess.board()); 
+	const [chessBoard, setChessBoard] = useState<React.ReactNode[]>([]);
+	const highlighted = useRef<string>('##');
+	const kingCheckedPos= useRef("##");
 
 	const get_piece_position = ( piece: { type: string, color: string} ) => {
-    let squares: string[] = [];
+    const squares: string[] = [];
       chess.board().map(row => {
         row.map(p => {
             if (p?.color === piece.color && p?.type === piece.type) {
@@ -33,8 +33,7 @@ export default function ChessBoard() {
 
 	const toggleDataActive = (key: string, value: string) => {
 		// Get possible moves for the selected square
-		// @ts-ignore
-		const moves = chess.moves({ square: key, verbose: true });
+		const moves = chess.moves({ square: key as Square, verbose: true });
 		// add data-from class to the key using refs
 		const currentSquare= refs.current[key[0]][parseInt(key[1])-1].current?.dataset;
 		if(currentSquare){
@@ -68,9 +67,25 @@ export default function ChessBoard() {
 	};
 
 	function handleSquareClick(e: React.MouseEvent<HTMLDivElement>) {
+		if(chess.isDraw()){
+			if(chess.isStalemate()){
+				setMessage("Draw by Stalemate");
+			}else if(chess.isInsufficientMaterial()){
+				setMessage("Draw due to Insufficient Material.");
+			}else if(chess.isDrawByFiftyMoves()){
+				setMessage("Draw due to 50 moves without capturing or check");
+			}else if(chess.isThreefoldRepetition()){
+				setMessage("Draw due to Three-Fold Repetition");
+			}else{
+				setMessage("Match is Drawn");
+			}
+			return;
+		}
 		const square = e.target as HTMLDivElement;
-		// @ts-ignore
-		const squareKey: string = square.dataset.key;
+		let squareKey: string="";
+		if(square.dataset.key){
+			squareKey = square.dataset.key;
+		}
 		// Handle move logic
 		if (square.dataset.active == 'true') {
 			toggleDataActive(highlighted.current, "false");
@@ -81,9 +96,13 @@ export default function ChessBoard() {
 				movePlayed = chess.move({ from: move, to: squareKey });
 			}catch (error) {
 				// It must be a promotion move since using only those square where move is possible
-				const userPrefer:string|null= prompt("Please type only one: q/r/n/b");
+				try{
+					const userPrefer:string|null= prompt("Please type only one: q/r/n/b");
 				movePlayed= chess.move({ from: move, to: squareKey,promotion:`${userPrefer?userPrefer:'q'}` });
-				console.log(movePlayed);
+				}catch(error){
+					console.log(error);
+				}
+				console.log(error);
 			}
 			if (movePlayed) {
 				// console.log(movePlayed);
@@ -95,7 +114,7 @@ export default function ChessBoard() {
 						squareRef.current.dataset.check = "false";
 					}
 				}
-				kingCheckedPos.current=="##";
+				kingCheckedPos.current="##";
 				if(movePlayed.san.at(-1)==='+'){
 					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
 					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
@@ -104,8 +123,14 @@ export default function ChessBoard() {
 					}
 					kingCheckedPos.current=squareKing;
 				}else if(movePlayed.san.at(-1)==='#'){
-					;
-					//to do
+					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
+					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+					if (squareRef?.current) {
+						squareRef.current.dataset.check = "true";
+					}
+					setMessage("CheckMate");
+				}else{
+					// console.log(movePlayed.san);
 				}
 				// Handle castling
 				if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
@@ -147,7 +172,9 @@ export default function ChessBoard() {
 				// Handle the promotion
 				if(movePlayed.flags.includes("p")){
 					const promotedClass:string|undefined= (movePlayed.color=='b' ? movePlayed.promotion : movePlayed.promotion?.toLocaleUpperCase());
-					square.className=promotedClass!;
+					if(promotedClass){
+						square.className=promotedClass;
+					}
 				}
 			}
 			return;
@@ -177,7 +204,7 @@ export default function ChessBoard() {
 				}
 				board.push(
 					<div key={`${columns[col]}${row}`} className={`${squareColor ? "black" : "white"}`}>
-						<Square ref={refs.current[column][row - 1]} customKey={`${columns[col]}${row}`} className={classNames} onClick={handleSquareClick} customCheck={"false"}/>
+						<Piece ref={refs.current[column][row - 1]} customKey={`${columns[col]}${row}`} className={classNames} onClick={handleSquareClick} customCheck={"false"}/>
 					</div>
 				);
 			}
@@ -186,7 +213,7 @@ export default function ChessBoard() {
 	}, []);
 	setTimeout(()=>{
 		setMessage(null);
-	},3000);
+	},5000);
 	const [message,setMessage]= useState<string|null>("Let's Begin match");
 	return (
 		<div className="chessBoard">
