@@ -35,6 +35,11 @@ export default function ChessBoard() {
 		// Get possible moves for the selected square
 		// @ts-ignore
 		const moves = chess.moves({ square: key, verbose: true });
+		// add data-from class to the key using refs
+		const currentSquare= refs.current[key[0]][parseInt(key[1])-1].current?.dataset;
+		if(currentSquare){
+			currentSquare.from= value;
+		}
 		moves.forEach((move:{ flags: string; to: string }) => {
 			// Handle castling
 			if (move.flags.includes("k") || move.flags.includes("q")) {
@@ -70,69 +75,73 @@ export default function ChessBoard() {
 		if (square.dataset.active == 'true') {
 			toggleDataActive(highlighted.current, "false");
 			const move = highlighted.current;
-			const movePlayed = chess.move({ from: move, to: squareKey });
+			try{
+				const movePlayed = chess.move({ from: move, to: squareKey });
 			// console.log(movePlayed);
-			if (movePlayed) {
-				// console.log(movePlayed);
-				// check if opponent is check or mate
-				if(kingCheckedPos.current!="##"){
-					const squareKing= kingCheckedPos.current;
-					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-					if (squareRef?.current) {
-						squareRef.current.dataset.check = "false";
+				if (movePlayed) {
+					// console.log(movePlayed);
+					// check if opponent is check or mate
+					if(kingCheckedPos.current!="##"){
+						const squareKing= kingCheckedPos.current;
+						const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+						if (squareRef?.current) {
+							squareRef.current.dataset.check = "false";
+						}
 					}
-				}
-				kingCheckedPos.current=="##";
-				if(movePlayed.san.at(-1)==='+'){
-					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
-					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-					if (squareRef?.current) {
-						squareRef.current.dataset.check = "true";
+					kingCheckedPos.current=="##";
+					if(movePlayed.san.at(-1)==='+'){
+						const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
+						const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+						if (squareRef?.current) {
+							squareRef.current.dataset.check = "true";
+						}
+						kingCheckedPos.current=squareKing;
+					}else if(movePlayed.san.at(-1)==='#'){
+						;
+						//to do
 					}
-					kingCheckedPos.current=squareKing;
-				}else if(movePlayed.san.at(-1)==='#'){
-					;
-					//to do
-				}
-				// Handle castling
-				if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
-					const isKingSide = movePlayed.flags.includes("k");
-					const rookFromKey = movePlayed.color === "w"
-						? (isKingSide ? "h1" : "a1") // White's king-side or queen-side rook
-						: (isKingSide ? "h8" : "a8"); // Black's king-side or queen-side rook
+					// Handle castling
+					if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
+						const isKingSide = movePlayed.flags.includes("k");
+						const rookFromKey = movePlayed.color === "w"
+							? (isKingSide ? "h1" : "a1") // White's king-side or queen-side rook
+							: (isKingSide ? "h8" : "a8"); // Black's king-side or queen-side rook
 
-					const rookToKey = movePlayed.color === "w"
-						? (isKingSide ? "f1" : "d1") // White's king-side or queen-side rook destination
-						: (isKingSide ? "f8" : "d8"); // Black's king-side or queen-side rook destination
+						const rookToKey = movePlayed.color === "w"
+							? (isKingSide ? "f1" : "d1") // White's king-side or queen-side rook destination
+							: (isKingSide ? "f8" : "d8"); // Black's king-side or queen-side rook destination
 
-					const rookFrom = refs.current[rookFromKey[0]][parseInt(rookFromKey[1])-1];
-					const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1])-1];
-					console.log(rookFrom.current,rookTo.current);
-					if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
-						rookTo.current.className = rookFrom.current.className; // Move rook class
-						rookFrom.current.className = ""; // Clear previous rook square
+						const rookFrom = refs.current[rookFromKey[0]][parseInt(rookFromKey[1])-1];
+						const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1])-1];
+						console.log(rookFrom.current,rookTo.current);
+						if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
+							rookTo.current.className = rookFrom.current.className; // Move rook class
+							rookFrom.current.className = ""; // Clear previous rook square
+						}
 					}
-				}
-				// Handle en passant
-				if (movePlayed.flags.includes("e")) {
-					const captureSquare = refs.current[movePlayed.to[0]][
-						parseInt(movePlayed.to[1]) - 1 - (movePlayed.color === 'w' ? 1 : -1)
-					];
-					if (captureSquare.current) {
-						captureSquare.current.className = ""; // Remove the captured pawn
+					// Handle en passant
+					if (movePlayed.flags.includes("e")) {
+						const captureSquare = refs.current[movePlayed.to[0]][
+							parseInt(movePlayed.to[1]) - 1 - (movePlayed.color === 'w' ? 1 : -1)
+						];
+						if (captureSquare.current) {
+							captureSquare.current.className = ""; // Remove the captured pawn
+						}
 					}
-				}
-				// Handle the promotion
-				// create a prompt and then place it \to:do
+					// Handle the promotion
+					// create a prompt and then place it \to:do
 
-				// Update the square for the moved piece
-				const prevSquare = refs.current[move[0]][parseInt(move[1]) - 1];
-				square.className = prevSquare.current?.className || "";
-				if (prevSquare.current) {
-					prevSquare.current.className = ""; // Clear previous class
-				}				
-				// Reset highlighted
-				highlighted.current = "##";
+					// Update the square for the moved piece
+					const prevSquare = refs.current[move[0]][parseInt(move[1]) - 1];
+					square.className = prevSquare.current?.className || "";
+					if (prevSquare.current) {
+						prevSquare.current.className = ""; // Clear previous class
+					}				
+					// Reset highlighted
+					highlighted.current = "##";
+				}
+			}catch (error) {
+				return;
 			}
 			return;
 		}
