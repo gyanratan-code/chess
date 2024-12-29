@@ -94,4 +94,26 @@
   box-shadow: 0 0 5px rgba(255, 0, 0, 0.5); /* Optional: adds a glowing effect */
   pointer-events: none; /* Ensures it doesn't block interactions with the parent */
 }
+[data-check="true"] {
+  position: relative; /* Ensure the parent can position the pseudo-element */
+  overflow: hidden; /* Prevent the glow from spilling out */
+}
+
+[data-check="true"]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%; /* Cover the container */
+  height: 100%; /* Cover the container */
+  background: radial-gradient(
+    circle,
+    rgba(255, 0, 0, 0.5) 10%, /* Bright glow near the center */
+    rgba(255, 0, 0, 0.3) 40%, /* Softer glow */
+    rgba(255, 0, 0, 0) 80% /* Fades out at 80% */
+  );
+  border-radius: 50%; /* Make the glow circular */
+  pointer-events: none; /* Ensure it doesn't block interactions */
+}
 
