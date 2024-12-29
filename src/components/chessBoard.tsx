@@ -146,8 +146,8 @@ export default function ChessBoard() {
 				highlighted.current = "##";
 				// Handle the promotion
 				if(movePlayed.flags.includes("p")){
-					const promotedClass:string= (movePlayed.color=='b' ? movePlayed.promotion : movePlayed.promotion?.toLocaleUpperCase());
-					square.className=promotedClass;
+					const promotedClass:string|undefined= (movePlayed.color=='b' ? movePlayed.promotion : movePlayed.promotion?.toLocaleUpperCase());
+					square.className=promotedClass!;
 				}
 			}
 			return;
