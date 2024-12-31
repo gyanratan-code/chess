@@ -160,7 +160,7 @@ export default function ChessBoard() {
 			}
 		}
 		setChessBoard(board);
-	}, [chessBoard]);
+	}, []);
 	setTimeout(() => {
 		setMessage(null);
 	}, 5000);
