@@ -1,12 +1,12 @@
 "use client";
-import { Chess, Square,Move } from 'chess.js';
+import { Chess, Square, Move } from 'chess.js';
 import Piece from '@/components/square.tsx';
-import React, { useEffect, useRef, useState, Suspense,RefObject } from 'react';
+import React, { useEffect, useRef, useState, Suspense, RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
 import { playMoveHelper, toggleDataActiveHelper } from '@/utils/cheeBoardHelper';
 
-const socket = io('wss://chess-backend-b7hj.onrender.com',{transports: ['websocket']});
+const socket = io('wss://chess-backend-b7hj.onrender.com', { transports: ['websocket'] });
 import { useSearchParams } from 'next/navigation';
 
 // standard notation for chessBoard
@@ -18,18 +18,18 @@ async function fetchData(link: string) {
 	return details;
 }
 interface roomComponentProps {
-  roomId: RefObject<string | null>;
-  authToken: RefObject<string | null>;
-	roll: RefObject<string|null>;
+	roomId: RefObject<string | null>;
+	authToken: RefObject<string | null>;
+	roll: RefObject<string | null>;
 }
-function RoomComponent({roomId,authToken,roll}:roomComponentProps) {
+function RoomComponent({ roomId, authToken, roll }: roomComponentProps) {
 	const router = useRouter();
 	roomId.current = useSearchParams().get('roomId');
 	authToken.current = useSearchParams().get('authToken');
-	roll.current= useSearchParams().get('roll');
+	roll.current = useSearchParams().get('roll');
 	if (roomId.current && authToken.current) {
 		// console.log(roomId.current,authToken.current);
-		socket.emit("joinRoom",{"roomId":roomId.current,"authToken":authToken.current});
+		socket.emit("joinRoom", { "roomId": roomId.current, "authToken": authToken.current });
 		return (
 			<>
 				<div>Copy Url from your browser and send to your friend</div>
@@ -47,9 +47,9 @@ function RoomComponent({roomId,authToken,roll}:roomComponentProps) {
 				<button onClick={(e) => {
 					e.preventDefault();
 					fetchData('/ids').then(roomDetails => {
-						const newLink:string= "/?roomId="+roomDetails.roomId+"&authToken="+roomDetails.authToken+"&roll=w";
+						const newLink: string = "/?roomId=" + roomDetails.roomId + "&authToken=" + roomDetails.authToken + "&roll=w";
 						// redirect to new link
-						socket.emit("createRoom",{"roomId":roomDetails.roomId,"authToken":roomDetails.authToken});
+						socket.emit("createRoom", { "roomId": roomDetails.roomId, "authToken": roomDetails.authToken });
 						router.push(newLink);
 						// console.log(roomDetails);
 					}).catch(error => {
@@ -65,9 +65,9 @@ export default function ChessBoard() {
 	const chess = new Chess();
 	const highlighted = useRef<string>('##');
 	const kingCheckedPos = useRef<string>("##");
-	const roomId = useRef<string|null>('');
-	const authToken = useRef<string|null>('');
-	const roll= useRef<string|null>('');
+	const roomId = useRef<string | null>('');
+	const authToken = useRef<string | null>('');
+	const roll = useRef<string | null>('');
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [position, setPosition] = useState(chess.board());
 	const [chessBoard, setChessBoard] = useState<React.ReactNode[]>([]);
@@ -80,12 +80,12 @@ export default function ChessBoard() {
 		}, {})
 	);
 
-	function toggleDataActive(key: string, value: string){
+	function toggleDataActive(key: string, value: string) {
 		const moves = chess.moves({ square: key as Square, verbose: true });
-		toggleDataActiveHelper(key,value,moves,refs);
+		toggleDataActiveHelper(key, value, moves, refs);
 	}
-	function playMove(movePlayed:Move|null){
-		playMoveHelper(movePlayed,refs,kingCheckedPos,highlighted,setMessage,chess.board());
+	function playMove(movePlayed: Move | null) {
+		playMoveHelper(movePlayed, refs, kingCheckedPos, highlighted, setMessage, chess.board());
 	}
 	function handleSquareClick(e: React.MouseEvent<HTMLDivElement>) {
 		if (chess.isDraw()) {
@@ -123,8 +123,8 @@ export default function ChessBoard() {
 				}
 				console.log(error);
 			}
-			if(movePlayed?.color==roll.current){
-				socket.emit("sendMessage",{"roomId":roomId.current,"message":movePlayed});
+			if (movePlayed?.color == roll.current) {
+				socket.emit("sendMessage", { "roomId": roomId.current, "message": movePlayed });
 			}
 			playMove(movePlayed);
 			return;
@@ -137,10 +137,19 @@ export default function ChessBoard() {
 				return;
 			}
 		}
+		if(square.className){
+			const className= square.className;
+			const color= (className>='A' && className<='Z') ? 'w' : 'b';
+			console.log(color,roll.current);
+			console.log(typeof(color),typeof(roll.current));
+			if(color!=roll.current){
+				return;
+			}
+		}
 		toggleDataActive(squareKey, "true");
 		highlighted.current = squareKey;
 	}
-
+	
 	useEffect(() => {
 		const board = [];
 		for (let row = 8; row > 0; row -= 1) {
@@ -166,19 +175,19 @@ export default function ChessBoard() {
 	}, 5000);
 	// all sockets protocal which will be recieved here
 	socket.on("connect", () => {
-		console.log(`User with socket id${socket.id} connected.`); 
+		console.log(`User with socket id${socket.id} connected.`);
 	});
-	socket.on("disconnect",()=>{
+	socket.on("disconnect", () => {
 		console.log(`User with socket id${socket.id} disconnected`);
 	});
-	socket.on("receiveMessage",(msg)=>{
+	socket.on("receiveMessage", (msg) => {
 		console.log(msg.message);
-		const movePlayedByOpponent= msg.message;
-		const fromSquare= movePlayedByOpponent.from;
-		const toSquare= movePlayedByOpponent.to;
-		if(movePlayedByOpponent.flags.includes("p")){
+		const movePlayedByOpponent = msg.message;
+		const fromSquare = movePlayedByOpponent.from;
+		const toSquare = movePlayedByOpponent.to;
+		if (movePlayedByOpponent.flags.includes("p")) {
 			chess.move({ from: fromSquare, to: toSquare, promotion: movePlayedByOpponent.promotion });
-		}else{
+		} else {
 			chess.move({ from: fromSquare, to: toSquare });
 		}
 		playMove(movePlayedByOpponent);
@@ -186,17 +195,17 @@ export default function ChessBoard() {
 	return (
 		<>
 			<Suspense fallback={<div>Loading...</div>}>
-				<RoomComponent  roomId={roomId} authToken={authToken} roll={roll}/>
-			</Suspense>
-			<div className="chessBoard">
-				{chessBoard}
-				<div
-					className={`announcement ${message ? "visible" : "hidden"}`}
-					aria-hidden={!message}
-				>
-					{message}
+				<RoomComponent roomId={roomId} authToken={authToken} roll={roll} />
+				<div className="chessBoard">
+					{chessBoard}
+					<div
+						className={`announcement ${message ? "visible" : "hidden"}`}
+						aria-hidden={!message}
+					>
+						{message}
+					</div>
 				</div>
-			</div>
+			</Suspense>
 		</>
 	);
 }
