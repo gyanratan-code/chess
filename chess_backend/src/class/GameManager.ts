@@ -14,5 +14,5 @@ export default class GameManager {
         const gr = new GameRoom(id,player1, player2);
         this.rooms.push(gr);
     }
-
+ 
 }

@@ -4,21 +4,25 @@ import Piece from '@/components/square.tsx';
 import React, { useEffect, useRef, useState, Suspense,RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
+import { playMoveHelper, toggleDataActiveHelper } from '@/utils/cheeBoardHelper';
 
 const socket = io('wss://chess-backend-b7hj.onrender.com',{transports: ['websocket']});
 import { useSearchParams } from 'next/navigation';
 
+// standard notation for chessBoard
+const columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+// for fetching roomId and authToken for a room
 async function fetchData(link: string) {
 	const data = await fetch(link);
 	const details = await data.json();
 	return details;
 }
-interface MyComponentProps {
+interface roomComponentProps {
   roomId: RefObject<string | null>;
   authToken: RefObject<string | null>;
 	roll: RefObject<string|null>;
 }
-function RoomComponent({roomId,authToken,roll}:MyComponentProps) {
+function RoomComponent({roomId,authToken,roll}:roomComponentProps) {
 	const router = useRouter();
 	roomId.current = useSearchParams().get('roomId');
 	authToken.current = useSearchParams().get('authToken');
@@ -59,27 +63,16 @@ function RoomComponent({roomId,authToken,roll}:MyComponentProps) {
 
 export default function ChessBoard() {
 	const chess = new Chess();
+	const highlighted = useRef<string>('##');
+	const kingCheckedPos = useRef<string>("##");
 	const roomId = useRef<string|null>('');
 	const authToken = useRef<string|null>('');
 	const roll= useRef<string|null>('');
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const [position, setPosition] = useState(chess.board());
 	const [chessBoard, setChessBoard] = useState<React.ReactNode[]>([]);
-	const highlighted = useRef<string>('##');
-	const kingCheckedPos = useRef("##");
+	const [message, setMessage] = useState<string | null>("Let's Begin match");
 
-	const get_piece_position = (piece: { type: string, color: string }) => {
-		const squares: string[] = [];
-		chess.board().map(row => {
-			row.map(p => {
-				if (p?.color === piece.color && p?.type === piece.type) {
-					squares.push(p.square)
-				}
-			})
-		})
-		return squares;
-	}
-	const columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 	const refs = useRef<Record<string, React.RefObject<HTMLDivElement | null>[]>>(
 		columns.reduce<Record<string, React.RefObject<HTMLDivElement | null>[]>>((acc, col) => {
 			acc[col] = Array.from({ length: 8 }, () => React.createRef<HTMLDivElement>());
@@ -87,128 +80,12 @@ export default function ChessBoard() {
 		}, {})
 	);
 
-	const toggleDataActive = (key: string, value: string) => {
-		// Get possible moves for the selected square
+	function toggleDataActive(key: string, value: string){
 		const moves = chess.moves({ square: key as Square, verbose: true });
-		// add data-from class to the key using refs
-		const currentSquare = refs.current[key[0]][parseInt(key[1]) - 1].current?.dataset;
-		if (currentSquare) {
-			currentSquare.from = value;
-		}
-		moves.forEach((move: { flags: string; to: string }) => {
-			// Handle castling
-			if (move.flags.includes("k") || move.flags.includes("q")) {
-				// King-side castling (O-O)
-				const rookSquare = move.flags.includes("k")
-					? refs.current[key[0]][7] // Last square in the row
-					: refs.current[key[0]][0]; // First square in the row
-				// Mark the rook's square as active
-				if (rookSquare.current) {
-					rookSquare.current.dataset.active = value;
-				}
-			}
-			// Handle en passant
-			if (move.flags.includes("e")) {
-				const captureSquare = refs.current[move.to[0]][parseInt(move.to[1]) - 1];
-				if (captureSquare.current) {
-					captureSquare.current.dataset.active = value;
-				}
-			}
-			// Handle normal moves
-			const targetSquare = refs.current[move.to[0]][parseInt(move.to[1]) - 1];
-			if (targetSquare?.current) {
-				targetSquare.current.dataset.active = value;
-			}
-		});
-	};
-	const playMove =(movePlayed:Move|null)=>{
-		if (movePlayed) {
-			if(movePlayed?.color==roll.current){
-				socket.emit("sendMessage",{"roomId":roomId.current,"message":movePlayed});
-			}
-			// console.log(movePlayed);
-			// check if opponent is check or mate
-			if (kingCheckedPos.current != "##") {
-				const squareKing = kingCheckedPos.current;
-				const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-				if (squareRef?.current) {
-					squareRef.current.dataset.check = "false";
-				}
-			}
-			kingCheckedPos.current = "##";
-			if (movePlayed.san.at(-1) === '+') {
-				const squareKing = get_piece_position({ type: 'k', 'color': (movePlayed.color === 'b' ? 'w' : 'b') })[0];
-				const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-				if (squareRef?.current) {
-					squareRef.current.dataset.check = "true";
-				}
-				kingCheckedPos.current = squareKing;
-			} else if (movePlayed.san.at(-1) === '#') {
-				const squareKing = get_piece_position({ type: 'k', 'color': (movePlayed.color === 'b' ? 'w' : 'b') })[0];
-				const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-				if (squareRef?.current) {
-					squareRef.current.dataset.check = "true";
-				}
-				setMessage("CheckMate");
-			} else {
-				// console.log(movePlayed.san);
-			}
-			// Handle castling
-			if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
-				const isKingSide = movePlayed.flags.includes("k");
-				const rookFromKey = movePlayed.color === "w"
-					? (isKingSide ? "h1" : "a1") // White's king-side or queen-side rook
-					: (isKingSide ? "h8" : "a8"); // Black's king-side or queen-side rook
-
-				const rookToKey = movePlayed.color === "w"
-					? (isKingSide ? "f1" : "d1") // White's king-side or queen-side rook destination
-					: (isKingSide ? "f8" : "d8"); // Black's king-side or queen-side rook destination
-
-				const rookFrom = refs.current[rookFromKey[0]][parseInt(rookFromKey[1]) - 1];
-				const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1]) - 1];
-				// console.log(rookFrom.current,rookTo.current);
-				if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
-					rookTo.current.className = rookFrom.current.className; // Move rook class
-					rookFrom.current.className = ""; // Clear previous rook square
-				}
-			}
-			// Handle en passant
-			if (movePlayed.flags.includes("e")) {
-				const captureSquare = refs.current[movePlayed.to[0]][
-					parseInt(movePlayed.to[1]) - 1 - (movePlayed.color === 'w' ? 1 : -1)
-				];
-				if (captureSquare.current) {
-					captureSquare.current.className = ""; // Remove the captured pawn
-				}
-			}
-
-			// Update the square for the moved piece
-			const from= movePlayed.from;
-			const prevSquare = refs.current[from[0]][parseInt(from[1]) - 1];
-			const to= movePlayed.to;
-			const square= (refs.current[to[0]][parseInt(to[1])-1]).current;
-			if(square){
-				square.className = prevSquare.current?.className || "";
-			}
-
-			if (prevSquare.current) {
-				prevSquare.current.className = ""; // Clear previous class
-			}
-			// Reset highlighted
-			highlighted.current = "##";
-			// Handle the promotion
-			if (movePlayed.flags.includes("p")) {
-				const promotedClass: string | undefined = (movePlayed.color == 'b' ? movePlayed.promotion : movePlayed.promotion?.toLocaleUpperCase());
-				if (promotedClass) {
-					if(square){
-						square.className = promotedClass;
-					}
-				}
-			}
-			
-			return true;
-		}
-		return false;
+		toggleDataActiveHelper(key,value,moves,refs);
+	}
+	function playMove(movePlayed:Move|null){
+		playMoveHelper(movePlayed,refs,kingCheckedPos,highlighted,setMessage,chess.board());
 	}
 	function handleSquareClick(e: React.MouseEvent<HTMLDivElement>) {
 		if (chess.isDraw()) {
@@ -226,10 +103,7 @@ export default function ChessBoard() {
 			return;
 		}
 		const square = e.target as HTMLDivElement;
-		let squareKey: string = "";
-		if (square.dataset.key) {
-			squareKey = square.dataset.key;
-		}
+		const squareKey: string = square.dataset?.key || "";
 		// Handle move logic
 		if (square.dataset.active == 'true') {
 			toggleDataActive(highlighted.current, "false");
@@ -249,7 +123,9 @@ export default function ChessBoard() {
 				}
 				console.log(error);
 			}
-			// here rechange
+			if(movePlayed?.color==roll.current){
+				socket.emit("sendMessage",{"roomId":roomId.current,"message":movePlayed});
+			}
 			playMove(movePlayed);
 			return;
 		}
@@ -284,7 +160,7 @@ export default function ChessBoard() {
 			}
 		}
 		setChessBoard(board);
-	}, []);
+	}, [chessBoard]);
 	setTimeout(() => {
 		setMessage(null);
 	}, 5000);
@@ -307,7 +183,6 @@ export default function ChessBoard() {
 		}
 		playMove(movePlayedByOpponent);
 	});
-	const [message, setMessage] = useState<string | null>("Let's Begin match");
 	return (
 		<>
 			<Suspense fallback={<div>Loading...</div>}>
