@@ -1,45 +1,101 @@
 "use client";
-import { Chess, Square } from 'chess.js';
+import { Chess, Square,Move } from 'chess.js';
 import Piece from '@/components/square.tsx';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Suspense,RefObject } from 'react';
+import { useRouter } from 'next/navigation';
+import { io } from 'socket.io-client';
+
+const socket = io('wss://chess-backend-b7hj.onrender.com',{transports: ['websocket']});
+import { useSearchParams } from 'next/navigation';
+
+async function fetchData(link: string) {
+	const data = await fetch(link);
+	const details = await data.json();
+	return details;
+}
+interface MyComponentProps {
+  roomId: RefObject<string | null>;
+  authToken: RefObject<string | null>;
+	roll: RefObject<string|null>;
+}
+function RoomComponent({roomId,authToken,roll}:MyComponentProps) {
+	const router = useRouter();
+	roomId.current = useSearchParams().get('roomId');
+	authToken.current = useSearchParams().get('authToken');
+	roll.current= useSearchParams().get('roll');
+	if (roomId.current && authToken.current) {
+		// console.log(roomId.current,authToken.current);
+		socket.emit("joinRoom",{"roomId":roomId.current,"authToken":authToken.current});
+		return (
+			<>
+				<div>Copy Url from your browser and send to your friend</div>
+			</>
+		);
+	} else if (roomId.current || authToken.current) {
+		return (
+			<>
+				<div>Ask correct params from your friend</div>
+			</>
+		);
+	} else {
+		return (
+			<>
+				<button onClick={(e) => {
+					e.preventDefault();
+					fetchData('/ids').then(roomDetails => {
+						const newLink:string= "/?roomId="+roomDetails.roomId+"&authToken="+roomDetails.authToken+"&roll=w";
+						// redirect to new link
+						socket.emit("createRoom",{"roomId":roomDetails.roomId,"authToken":roomDetails.authToken});
+						router.push(newLink);
+						// console.log(roomDetails);
+					}).catch(error => {
+						console.error('Error fetching room details:', error);
+					});
+				}}>Get Link</button>
+			</>
+		);
+	}
+}
 
 export default function ChessBoard() {
 	const chess = new Chess();
+	const roomId = useRef<string|null>('');
+	const authToken = useRef<string|null>('');
+	const roll= useRef<string|null>('');
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const [position, setPosition] = useState(chess.board()); 
+	const [position, setPosition] = useState(chess.board());
 	const [chessBoard, setChessBoard] = useState<React.ReactNode[]>([]);
 	const highlighted = useRef<string>('##');
-	const kingCheckedPos= useRef("##");
+	const kingCheckedPos = useRef("##");
 
-	const get_piece_position = ( piece: { type: string, color: string} ) => {
-    const squares: string[] = [];
-      chess.board().map(row => {
-        row.map(p => {
-            if (p?.color === piece.color && p?.type === piece.type) {
-                squares.push(p.square)
-            }
-            
-        })
-    })
-    return squares;
-  }
+	const get_piece_position = (piece: { type: string, color: string }) => {
+		const squares: string[] = [];
+		chess.board().map(row => {
+			row.map(p => {
+				if (p?.color === piece.color && p?.type === piece.type) {
+					squares.push(p.square)
+				}
+			})
+		})
+		return squares;
+	}
 	const columns = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 	const refs = useRef<Record<string, React.RefObject<HTMLDivElement | null>[]>>(
 		columns.reduce<Record<string, React.RefObject<HTMLDivElement | null>[]>>((acc, col) => {
 			acc[col] = Array.from({ length: 8 }, () => React.createRef<HTMLDivElement>());
 			return acc;
 		}, {})
-	);	
+	);
 
 	const toggleDataActive = (key: string, value: string) => {
 		// Get possible moves for the selected square
 		const moves = chess.moves({ square: key as Square, verbose: true });
 		// add data-from class to the key using refs
-		const currentSquare= refs.current[key[0]][parseInt(key[1])-1].current?.dataset;
-		if(currentSquare){
-			currentSquare.from= value;
+		const currentSquare = refs.current[key[0]][parseInt(key[1]) - 1].current?.dataset;
+		if (currentSquare) {
+			currentSquare.from = value;
 		}
-		moves.forEach((move:{ flags: string; to: string }) => {
+		moves.forEach((move: { flags: string; to: string }) => {
 			// Handle castling
 			if (move.flags.includes("k") || move.flags.includes("q")) {
 				// King-side castling (O-O)
@@ -65,25 +121,113 @@ export default function ChessBoard() {
 			}
 		});
 	};
+	const playMove =(movePlayed:Move|null)=>{
+		if (movePlayed) {
+			if(movePlayed?.color==roll.current){
+				socket.emit("sendMessage",{"roomId":roomId.current,"message":movePlayed});
+			}
+			// console.log(movePlayed);
+			// check if opponent is check or mate
+			if (kingCheckedPos.current != "##") {
+				const squareKing = kingCheckedPos.current;
+				const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+				if (squareRef?.current) {
+					squareRef.current.dataset.check = "false";
+				}
+			}
+			kingCheckedPos.current = "##";
+			if (movePlayed.san.at(-1) === '+') {
+				const squareKing = get_piece_position({ type: 'k', 'color': (movePlayed.color === 'b' ? 'w' : 'b') })[0];
+				const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+				if (squareRef?.current) {
+					squareRef.current.dataset.check = "true";
+				}
+				kingCheckedPos.current = squareKing;
+			} else if (movePlayed.san.at(-1) === '#') {
+				const squareKing = get_piece_position({ type: 'k', 'color': (movePlayed.color === 'b' ? 'w' : 'b') })[0];
+				const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
+				if (squareRef?.current) {
+					squareRef.current.dataset.check = "true";
+				}
+				setMessage("CheckMate");
+			} else {
+				// console.log(movePlayed.san);
+			}
+			// Handle castling
+			if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
+				const isKingSide = movePlayed.flags.includes("k");
+				const rookFromKey = movePlayed.color === "w"
+					? (isKingSide ? "h1" : "a1") // White's king-side or queen-side rook
+					: (isKingSide ? "h8" : "a8"); // Black's king-side or queen-side rook
 
+				const rookToKey = movePlayed.color === "w"
+					? (isKingSide ? "f1" : "d1") // White's king-side or queen-side rook destination
+					: (isKingSide ? "f8" : "d8"); // Black's king-side or queen-side rook destination
+
+				const rookFrom = refs.current[rookFromKey[0]][parseInt(rookFromKey[1]) - 1];
+				const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1]) - 1];
+				// console.log(rookFrom.current,rookTo.current);
+				if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
+					rookTo.current.className = rookFrom.current.className; // Move rook class
+					rookFrom.current.className = ""; // Clear previous rook square
+				}
+			}
+			// Handle en passant
+			if (movePlayed.flags.includes("e")) {
+				const captureSquare = refs.current[movePlayed.to[0]][
+					parseInt(movePlayed.to[1]) - 1 - (movePlayed.color === 'w' ? 1 : -1)
+				];
+				if (captureSquare.current) {
+					captureSquare.current.className = ""; // Remove the captured pawn
+				}
+			}
+
+			// Update the square for the moved piece
+			const from= movePlayed.from;
+			const prevSquare = refs.current[from[0]][parseInt(from[1]) - 1];
+			const to= movePlayed.to;
+			const square= (refs.current[to[0]][parseInt(to[1])-1]).current;
+			if(square){
+				square.className = prevSquare.current?.className || "";
+			}
+
+			if (prevSquare.current) {
+				prevSquare.current.className = ""; // Clear previous class
+			}
+			// Reset highlighted
+			highlighted.current = "##";
+			// Handle the promotion
+			if (movePlayed.flags.includes("p")) {
+				const promotedClass: string | undefined = (movePlayed.color == 'b' ? movePlayed.promotion : movePlayed.promotion?.toLocaleUpperCase());
+				if (promotedClass) {
+					if(square){
+						square.className = promotedClass;
+					}
+				}
+			}
+			
+			return true;
+		}
+		return false;
+	}
 	function handleSquareClick(e: React.MouseEvent<HTMLDivElement>) {
-		if(chess.isDraw()){
-			if(chess.isStalemate()){
+		if (chess.isDraw()) {
+			if (chess.isStalemate()) {
 				setMessage("Draw by Stalemate");
-			}else if(chess.isInsufficientMaterial()){
+			} else if (chess.isInsufficientMaterial()) {
 				setMessage("Draw due to Insufficient Material.");
-			}else if(chess.isDrawByFiftyMoves()){
+			} else if (chess.isDrawByFiftyMoves()) {
 				setMessage("Draw due to 50 moves without capturing or check");
-			}else if(chess.isThreefoldRepetition()){
+			} else if (chess.isThreefoldRepetition()) {
 				setMessage("Draw due to Three-Fold Repetition");
-			}else{
+			} else {
 				setMessage("Match is Drawn");
 			}
 			return;
 		}
 		const square = e.target as HTMLDivElement;
-		let squareKey: string="";
-		if(square.dataset.key){
+		let squareKey: string = "";
+		if (square.dataset.key) {
 			squareKey = square.dataset.key;
 		}
 		// Handle move logic
@@ -91,92 +235,22 @@ export default function ChessBoard() {
 			toggleDataActive(highlighted.current, "false");
 			const move = highlighted.current;
 			let movePlayed: ReturnType<typeof chess.move> | null = null;
-			try{
+			try {
 				// try running to intial square to target square
 				movePlayed = chess.move({ from: move, to: squareKey });
-			}catch (error) {
+				// console.log(movePlayed);
+			} catch (error) {
 				// It must be a promotion move since using only those square where move is possible
-				try{
-					const userPrefer:string|null= prompt("Please type only one: q/r/n/b");
-				movePlayed= chess.move({ from: move, to: squareKey,promotion:`${userPrefer?userPrefer:'q'}` });
-				}catch(error){
+				try {
+					const userPrefer: string | null = prompt("Please type only one: q/r/n/b");
+					movePlayed = chess.move({ from: move, to: squareKey, promotion: `${userPrefer ? userPrefer : 'q'}` });
+				} catch (error) {
 					console.log(error);
 				}
 				console.log(error);
 			}
-			if (movePlayed) {
-				// console.log(movePlayed);
-				// check if opponent is check or mate
-				if(kingCheckedPos.current!="##"){
-					const squareKing= kingCheckedPos.current;
-					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-					if (squareRef?.current) {
-						squareRef.current.dataset.check = "false";
-					}
-				}
-				kingCheckedPos.current="##";
-				if(movePlayed.san.at(-1)==='+'){
-					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
-					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-					if (squareRef?.current) {
-						squareRef.current.dataset.check = "true";
-					}
-					kingCheckedPos.current=squareKing;
-				}else if(movePlayed.san.at(-1)==='#'){
-					const squareKing= get_piece_position({type:'k','color':(movePlayed.color==='b'?'w':'b')})[0];
-					const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
-					if (squareRef?.current) {
-						squareRef.current.dataset.check = "true";
-					}
-					setMessage("CheckMate");
-				}else{
-					// console.log(movePlayed.san);
-				}
-				// Handle castling
-				if (movePlayed.flags.includes("k") || movePlayed.flags.includes("q")) {
-					const isKingSide = movePlayed.flags.includes("k");
-					const rookFromKey = movePlayed.color === "w"
-						? (isKingSide ? "h1" : "a1") // White's king-side or queen-side rook
-						: (isKingSide ? "h8" : "a8"); // Black's king-side or queen-side rook
-
-					const rookToKey = movePlayed.color === "w"
-						? (isKingSide ? "f1" : "d1") // White's king-side or queen-side rook destination
-						: (isKingSide ? "f8" : "d8"); // Black's king-side or queen-side rook destination
-
-					const rookFrom = refs.current[rookFromKey[0]][parseInt(rookFromKey[1])-1];
-					const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1])-1];
-					// console.log(rookFrom.current,rookTo.current);
-					if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
-						rookTo.current.className = rookFrom.current.className; // Move rook class
-						rookFrom.current.className = ""; // Clear previous rook square
-					}
-				}
-				// Handle en passant
-				if (movePlayed.flags.includes("e")) {
-					const captureSquare = refs.current[movePlayed.to[0]][
-						parseInt(movePlayed.to[1]) - 1 - (movePlayed.color === 'w' ? 1 : -1)
-					];
-					if (captureSquare.current) {
-						captureSquare.current.className = ""; // Remove the captured pawn
-					}
-				}
-				
-				// Update the square for the moved piece
-				const prevSquare = refs.current[move[0]][parseInt(move[1]) - 1];
-				square.className = prevSquare.current?.className || "";
-				if (prevSquare.current) {
-					prevSquare.current.className = ""; // Clear previous class
-				}				
-				// Reset highlighted
-				highlighted.current = "##";
-				// Handle the promotion
-				if(movePlayed.flags.includes("p")){
-					const promotedClass:string|undefined= (movePlayed.color=='b' ? movePlayed.promotion : movePlayed.promotion?.toLocaleUpperCase());
-					if(promotedClass){
-						square.className=promotedClass;
-					}
-				}
-			}
+			// here rechange
+			playMove(movePlayed);
 			return;
 		}
 		// Handle toggling highlight and selection
@@ -204,26 +278,50 @@ export default function ChessBoard() {
 				}
 				board.push(
 					<div key={`${columns[col]}${row}`} className={`${squareColor ? "black" : "white"}`}>
-						<Piece ref={refs.current[column][row - 1]} customKey={`${columns[col]}${row}`} className={classNames} onClick={handleSquareClick} customCheck={"false"}/>
+						<Piece ref={refs.current[column][row - 1]} customKey={`${columns[col]}${row}`} className={classNames} onClick={handleSquareClick} customCheck={"false"} />
 					</div>
 				);
 			}
 		}
 		setChessBoard(board);
 	}, []);
-	setTimeout(()=>{
+	setTimeout(() => {
 		setMessage(null);
-	},5000);
-	const [message,setMessage]= useState<string|null>("Let's Begin match");
+	}, 5000);
+	// all sockets protocal which will be recieved here
+	socket.on("connect", () => {
+		console.log(`User with socket id${socket.id} connected.`); 
+	});
+	socket.on("disconnect",()=>{
+		console.log(`User with socket id${socket.id} disconnected`);
+	});
+	socket.on("receiveMessage",(msg)=>{
+		console.log(msg.message);
+		const movePlayedByOpponent= msg.message;
+		const fromSquare= movePlayedByOpponent.from;
+		const toSquare= movePlayedByOpponent.to;
+		if(movePlayedByOpponent.flags.includes("p")){
+			chess.move({ from: fromSquare, to: toSquare, promotion: movePlayedByOpponent.promotion });
+		}else{
+			chess.move({ from: fromSquare, to: toSquare });
+		}
+		playMove(movePlayedByOpponent);
+	});
+	const [message, setMessage] = useState<string | null>("Let's Begin match");
 	return (
-		<div className="chessBoard">
-			{chessBoard}
-			<div
-				className={`announcement ${message ? "visible" : "hidden"}`}
-				aria-hidden={!message} // Accessibility: indicates when the element is inactive
-			>
-				{message}
+		<>
+			<Suspense fallback={<div>Loading...</div>}>
+				<RoomComponent  roomId={roomId} authToken={authToken} roll={roll}/>
+			</Suspense>
+			<div className="chessBoard">
+				{chessBoard}
+				<div
+					className={`announcement ${message ? "visible" : "hidden"}`}
+					aria-hidden={!message}
+				>
+					{message}
+				</div>
 			</div>
-		</div>
+		</>
 	);
 }

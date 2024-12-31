@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 
-const CustomDiv = forwardRef<HTMLDivElement, { 
+const Square = forwardRef<HTMLDivElement, { 
   className?: string; 
   customKey?: string; 
   onClick: React.MouseEventHandler<HTMLDivElement>; 
@@ -19,6 +19,6 @@ const CustomDiv = forwardRef<HTMLDivElement, {
 });
 
 // Set displayName for better debugging
-CustomDiv.displayName = 'CustomDiv';
+Square.displayName = 'Square';
 
-export default CustomDiv;
+export default Square;
