@@ -65,7 +65,7 @@ export const playMoveHelper = (movePlayed: Move | null, refs: RefDomMap, kingChe
       const rookTo = refs.current[rookToKey[0]][parseInt(rookToKey[1]) - 1];
       // console.log(rookFrom.current,rookTo.current);
       if (rookFrom && rookFrom.current && rookTo && rookTo.current) {
-        rookTo.current.className = rookFrom.current.className; // Move rook class
+        rookTo.current.className = (movePlayed.color=='w'? 'R':'r'); // Move rook class
         rookFrom.current.className = ""; // Clear previous rook square
       }
     }
@@ -114,27 +114,8 @@ export const toggleDataActiveHelper = (key: string, value: string, moves: Move[]
     currentSquare.from = value;
   }
   moves.forEach((move: { flags: string; to: string }) => {
-    // Handle castling
-    if (move.flags.includes("k") || move.flags.includes("q")) {
-      // King-side castling (O-O)
-      const rookSquare = move.flags.includes("k")
-        ? refs.current[key[0]][7] // Last square in the row
-        : refs.current[key[0]][0]; // First square in the row
-      // Mark the rook's square as active
-      if (rookSquare.current) {
-        rookSquare.current.dataset.active = value;
-      }
-    }
-    // Handle en passant
-    if (move.flags.includes("e")) {
-      const captureSquare = refs.current[move.to[0]][parseInt(move.to[1]) - 1];
-      if (captureSquare.current) {
-        captureSquare.current.dataset.active = value;
-      }
-    }
-    // Handle normal moves
     const targetSquare = refs.current[move.to[0]][parseInt(move.to[1]) - 1];
-    if (targetSquare?.current) {
+    if (targetSquare.current) {
       targetSquare.current.dataset.active = value;
     }
   });

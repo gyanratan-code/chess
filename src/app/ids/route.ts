@@ -13,7 +13,8 @@ function generateUniqueId(length: number): string {
 export async function GET() {
   const res= {
     "roomId": generateUniqueId(5),
-    "authToken": generateUniqueId(5)
+    "authToken": generateUniqueId(5),
+    "username": generateUniqueId(5)
   }
   return Response.json(res);
 }
