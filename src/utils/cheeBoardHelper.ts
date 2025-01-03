@@ -21,8 +21,14 @@ export const getPiecePosition = (piece: { type: PieceSymbol; color: Color; board
   return squares;
 };
 
-export const playMoveHelper = (movePlayed: Move | null, refs: RefDomMap, kingCheckedPos: { current: string }, highlighted: { current: string }, setMessage: React.Dispatch<React.SetStateAction<string | null>>, board2d: (Board2DProp | null)[][]) => {
+export const playMoveHelper = (movePlayed: Move | null, opponent:boolean, refs: RefDomMap, kingCheckedPos: { current: string }, highlighted: { current: string }, setMessage: React.Dispatch<React.SetStateAction<string | null>>, board2d: (Board2DProp | null)[][]) => {
+  const playMoveSound = (link:string) => {
+    const moveSound = new Audio(link); // file path
+    moveSound.volume = 0.5;
+    moveSound.play().catch((err) => console.error("Sound playback failed:", err));
+  };
   if (movePlayed) {
+    let soundPlayed= false;
     // console.log(movePlayed);
     // check if opponent is check or mate
     if (kingCheckedPos.current != "##") {
@@ -38,6 +44,10 @@ export const playMoveHelper = (movePlayed: Move | null, refs: RefDomMap, kingChe
       const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
       if (squareRef?.current) {
         squareRef.current.dataset.check = "true";
+        if(!soundPlayed){
+          playMoveSound('/sounds/move-check.mp3');
+          soundPlayed=true;
+        }
       }
       kingCheckedPos.current = squareKing;
     } else if (movePlayed.san.at(-1) === '#') {
@@ -45,6 +55,10 @@ export const playMoveHelper = (movePlayed: Move | null, refs: RefDomMap, kingChe
       const squareRef = refs.current?.[squareKing[0]]?.[parseInt(squareKing[1]) - 1];
       if (squareRef?.current) {
         squareRef.current.dataset.check = "true";
+      }
+      if(!soundPlayed){
+        playMoveSound('/sounds/game-end.webm');
+        soundPlayed=true;
       }
       setMessage("CheckMate");
     } else {
@@ -68,6 +82,10 @@ export const playMoveHelper = (movePlayed: Move | null, refs: RefDomMap, kingChe
         rookTo.current.className = (movePlayed.color=='w'? 'R':'r'); // Move rook class
         rookFrom.current.className = ""; // Clear previous rook square
       }
+      if(!soundPlayed){
+        playMoveSound('/sounds/castle.mp3');
+        soundPlayed=true;
+      }
     }
     // Handle en passant
     if (movePlayed.flags.includes("e")) {
@@ -77,8 +95,17 @@ export const playMoveHelper = (movePlayed: Move | null, refs: RefDomMap, kingChe
       if (captureSquare.current) {
         captureSquare.current.className = ""; // Remove the captured pawn
       }
+      if(!soundPlayed){
+        playMoveSound('/sounds/capture.mp3');
+        soundPlayed=true;
+      }
     }
-
+    if(movePlayed.san.includes('x')){
+      if(!soundPlayed){
+        playMoveSound('/sounds/capture.mp3');
+        soundPlayed=true;
+      }
+    }
     // Update the square for the moved piece
     const from = movePlayed.from;
     const prevSquare = refs.current[from[0]][parseInt(from[1]) - 1];
@@ -100,7 +127,16 @@ export const playMoveHelper = (movePlayed: Move | null, refs: RefDomMap, kingChe
         if (square) {
           square.className = promotedClass;
         }
+        if(!soundPlayed){
+          playMoveSound('/sounds/promote.mp3');
+          soundPlayed=true;
+        }
       }
+    }
+    if(!soundPlayed){
+      const conditionalLink:string= (opponent?'/sounds/move-opponent.mp3':'/sounds/move-self.mp3');
+      playMoveSound(conditionalLink);
+      soundPlayed=true;
     }
     return true;
   }

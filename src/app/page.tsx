@@ -20,7 +20,7 @@ const HomePage: React.FC = () => {
       </h1>
       <p className="text-gray-600 text-center max-w-xl mb-6">
         Play an exciting game of chess with your friend! Simply create a unique
-        game link and share it with them to start playing. It's simple, fast,
+        game link and share it with them to start playing. It&apos;s simple, fast,
         and fun!
       </p>
       <SocketProvider>
@@ -30,7 +30,7 @@ const HomePage: React.FC = () => {
         <div className="mt-6 w-full max-w-lg text-center">
           <p className="text-gray-600 mb-2">Share this link with your friend:</p>
           <div className="bg-gray-100 p-4 rounded-md border border-gray-200 text-sm break-all">
-            {`${window.location.origin}${friendLink}`}
+            {window.location.origin}{friendLink}
           </div>
 
           <div className="mt-4">
@@ -43,5 +43,6 @@ const HomePage: React.FC = () => {
     </div>
   );
 };
+
 
 export default HomePage;
