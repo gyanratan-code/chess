@@ -1,49 +1,25 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
+import '@/styles/clock.css';
 
 interface ClockProps {
-  totalTime: number; // expected in seconds
+  time: number; // expected in milliseconds
+  setTime:React.Dispatch<React.SetStateAction<number>>;
+  stop: boolean;
   increment?: number; // in seconds
-  stop?: boolean;
+  className?: string;
 }
+const Clock: React.FC<ClockProps> = ({ time, setTime, stop, increment = 0, className }) => {
 
-const Clock: React.FC<ClockProps> = ({ totalTime, stop=false, increment = 0 }) => {
-  const initialTime = {
-    minute: Math.floor(totalTime / 60),
-    second: totalTime % 60,
-    milis: 0,
-  };
-
-  interface TimeFormat {
-    minute: number;
-    second: number;
-    milis: number;
-  }
-
-  const [time, setTime] = useState<TimeFormat>(initialTime);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const addTime = (seconds: number, times: TimeFormat): TimeFormat => {
-    let newSeconds = times.second + seconds;
-    let newMinutes = times.minute;
-    if (newSeconds >= 60) {
-      newMinutes += Math.floor(newSeconds / 60);
-      newSeconds %= 60;
-    }
-    return { minute: newMinutes, second: newSeconds, milis: times.milis };
+  const addTime = (miliseconds: number,prevTime:number): number => {
+    return prevTime + miliseconds;
   };
 
-  const subtractTime = (miliseconds: number, times: TimeFormat): TimeFormat => {
-    let totalTimeInMillis = times.minute * 60000 + times.second * 1000 + times.milis - miliseconds;
-    if (totalTimeInMillis < 0) {
-      totalTimeInMillis = 0;
-    }
-    const helper = totalTimeInMillis % 60000;
-    return {
-      minute: Math.floor(totalTimeInMillis / 60000),
-      second: Math.floor(helper / 1000),
-      milis: Math.round(helper % 1000),
-    };
-  };
+  const decreaseTime = (miliseconds: number, prevTime:number): number =>{
+    if(prevTime-miliseconds<0) return 0;
+    else return prevTime-miliseconds;
+  }
 
   useEffect(() => {
     if (stop) {
@@ -54,8 +30,8 @@ const Clock: React.FC<ClockProps> = ({ totalTime, stop=false, increment = 0 }) =
       setTime((prevTime) => addTime(increment, prevTime));
     } else {
       intervalRef.current = setInterval(() => {
-        setTime((prevTime) => subtractTime(10, prevTime));
-      }, 10);
+        setTime((prevTime) => decreaseTime(100,prevTime));
+      }, 100);
     }
 
     return () => {
@@ -67,12 +43,12 @@ const Clock: React.FC<ClockProps> = ({ totalTime, stop=false, increment = 0 }) =
   }, [stop]);
 
   return (
-    <div className="clock-container">
+    <div className={`clock-container ${className}`}>
       <div className="clock">
-        {time.minute.toString().padStart(2, "0")}:
-        {time.second.toString().padStart(2, "0")}
-        {time.minute === 0 && time.second < 30
-          ? `.${(time.milis/10).toString().padStart(2, "0")}`
+        {Math.floor(time / 60000).toString().padStart(2, "0")}:
+        {Math.floor((time % 60000) / 1000).toString().padStart(2, "0")}
+        { (time <30*1000)
+          ? `:${Math.round((time % 1000) / 100).toString().padStart(2, "0")}`
           : ""}
       </div>
     </div>

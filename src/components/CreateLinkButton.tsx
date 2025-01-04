@@ -3,9 +3,10 @@ import { useSocket } from "@/contexts/socketContext";
 
 interface CreateLinkButtonProps {
   onLinkGenerated: (link: string, friendLink: string) => void;
+  time: number;
 }
 
-const CreateLinkButton: React.FC<CreateLinkButtonProps> = ({ onLinkGenerated }) => {
+const CreateLinkButton: React.FC<CreateLinkButtonProps> = ({ onLinkGenerated,time }) => {
   const socket = useSocket();
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
@@ -26,6 +27,7 @@ const CreateLinkButton: React.FC<CreateLinkButtonProps> = ({ onLinkGenerated }) 
           roomId: roomDetails.roomId,
           authToken: roomDetails.authToken,
           username: roomDetails.username,
+          time: time
         },
         (response: { success: boolean; message: string }) => {
           if (response.success) {

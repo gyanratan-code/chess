@@ -8,8 +8,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    const socketInstance = io("ws://localhost:3001", { transports: ["websocket"] });
-    setSocket(socketInstance); // Set the socket instance in state
+    const socketInstance = io("wss://chess-backend-b7hj.onrender.com", { transports: ["websocket"] });
+    setSocket(socketInstance); // state store of socket instance
 
     socketInstance.on("connect", () => {
       console.log("WebSocket connected:", socketInstance.id);
@@ -25,7 +25,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   if (!socket) {
-    // Optionally render a loading state while the socket is initializing
+    // Render the Loading page please
     return (
       <Loading />
     );

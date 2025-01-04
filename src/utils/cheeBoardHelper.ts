@@ -22,11 +22,18 @@ export const getPiecePosition = (piece: { type: PieceSymbol; color: Color; board
 };
 
 export const playMoveHelper = (movePlayed: Move | null, opponent:boolean, refs: RefDomMap, kingCheckedPos: { current: string }, highlighted: { current: string }, setMessage: React.Dispatch<React.SetStateAction<string | null>>, board2d: (Board2DProp | null)[][]) => {
-  const playMoveSound = (link:string) => {
-    const moveSound = new Audio(link); // file path
-    moveSound.volume = 0.5;
-    moveSound.play().catch((err) => console.error("Sound playback failed:", err));
+  const playMoveSound = (link: string) => {
+    fetch(link)
+      .then((response) => response.blob())
+      .then((blob) => {
+        const audioURL = URL.createObjectURL(blob);
+        const moveSound = new Audio(audioURL);
+        moveSound.volume = 0.5;
+        moveSound.play().catch((err) => console.error("Sound playback failed:", err));
+      })
+      .catch((err) => console.error("Failed to fetch and play sound:", err));
   };
+  
   if (movePlayed) {
     let soundPlayed= false;
     // console.log(movePlayed);

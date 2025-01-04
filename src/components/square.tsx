@@ -5,7 +5,8 @@ const Square = forwardRef<HTMLDivElement, {
   customKey?: string; 
   onClick: React.MouseEventHandler<HTMLDivElement>; 
   customCheck?: string;
-}>(({ className = '', customKey, onClick, customCheck }, ref) => {
+  style: React.CSSProperties;
+}>(({ className = '', customKey, onClick, customCheck ,style}, ref) => {
   return (
     <div 
       ref={ref} 
@@ -13,12 +14,12 @@ const Square = forwardRef<HTMLDivElement, {
       data-key={customKey} 
       data-active="false" 
       onClick={onClick} 
-      data-check={customCheck} 
+      data-check={customCheck}
+      style={style}
     />
   );
 });
 
-// Set displayName for better debugging
 Square.displayName = 'Square';
 
 export default Square;
