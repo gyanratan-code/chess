@@ -1,6 +1,6 @@
 # Chess
 
-A simple chess game implementation with a user-friendly interface.
+A simple chess game implementation built with Next.js.
 
 ## Features
 
@@ -21,15 +21,16 @@ cd chess
 Install dependencies:
 
 ```bash
-# If using Python (example)
-pip install -r requirements.txt
+npm install
 ```
 
-Run the game:
+Run the development server:
 
 ```bash
-python main.py  # Adjust based on your setup
+npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
 ## Usage
 
